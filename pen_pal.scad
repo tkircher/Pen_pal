@@ -232,23 +232,27 @@ module x_axis_block(controller = false) {
   }
 }
 
+// The FluidNC driver case
+case_w = 86;
+case_l = 106;
+case_t = 0.6 * 6;
+
 board_x = -4.2;
-board_y = 2.5;
+board_y = 2.5 + 4.6;
+
+board_w = 70;
+board_l = 70;
 
 // Using PCB coordinates
 PCB_holes = [[113, 137], [136, 107], [167, 137], [113, 73], [167, 73]];
 
 // Case mount holes, [x, y, rot]
-case_standoff = [[-37, -43, 0], [-37, 43, 0], [37, -43, 0], [37, 43, 0]];
+case_standoff = [[-case_w / 2 + 6, -case_l / 2 + 6, 180],
+                 [-case_w / 2 + 6,  case_l / 2 - 6, 90],
+                 [case_w / 2 - 15, -case_l / 2 + 6, 0],
+                 [ case_w / 2 - 6,  case_l / 2 - 6, 0]];
 
 module driver_case_bottom() {
-  case_w = 86;
-  case_l = 98;
-  case_t = 0.6 * 6;
-
-  board_w = 70;
-  board_l = 70;
-
   wall_h = 15;
 
   difference() {
@@ -271,7 +275,7 @@ module driver_case_bottom() {
       for(i = [0 : 3]) {
         translate([case_standoff[i][0], case_standoff[i][1], 0])
         rotate([0, 0, case_standoff[i][2]])
-          cylinder(d = standoff_d, h = case_t + 2.4, $fn = 90);
+          cylinder(d = standoff_d, h = case_t + 3, $fn = 90);
       }
 
       // Side walls
@@ -314,7 +318,7 @@ module driver_case_bottom() {
     for(i = [0 : 3]) {
       translate([case_standoff[i][0], case_standoff[i][1], -1])
       rotate([0, 0, case_standoff[i][2]]) {
-        cylinder(d = 3.4, h = case_t + 4, $fn = 90);
+        cylinder(d = 3.4, h = case_t + 5, $fn = 90);
 
         cylinder(d = 5.8 / (sqrt(3) / 2), h = 2.4 + 1, $fn = 6);
 
@@ -351,7 +355,7 @@ module driver_case_bottom() {
         }
       }
 
-      // Digital input and output, and servo cutouts
+      // Digital input and output side cutouts
       translate([70 / 2 + 1.5, -31.5, case_t + 1.8]) {
         difference() {
           cube([25, 65.5, case_t + wall_h + 1]);
@@ -365,8 +369,28 @@ module driver_case_bottom() {
         }
       }
 
+      // Digital input bottom cutout, for endstop wires
+      slot_w = 6;
+      slot_l = 21.5;
+
+      translate([70 / 2 + 5, slot_l / 2 - 2, -1]) {
+        for(i = [0 : 1])
+        for(j = [0 : 1]) {
+          mirror([i, 0, 0])
+          mirror([0, j, 0]) {
+            translate([slot_w / 2 - 3 / 2, slot_l / 2 - 3 / 2, 0])
+              cylinder(d = 3, h = 10, $fn = 60);
+          }
+        }
+
+        translate([-slot_w / 2 + 3 / 2, -slot_l / 2, 0])
+          cube([slot_w - 3, slot_l, 10]);
+
+        translate([-slot_w / 2, -slot_l / 2 + 3 / 2, 0])
+          cube([slot_w, slot_l - 3, 10]);
+      }
+
       // Heatsink cutouts
-      //  - Bottom thermal pad is where thermal resistance should be lowest -
       heatsink_x = [124, 142];
 
       for(n = [0 : 1]) {
@@ -408,8 +432,8 @@ module driver_case_bottom() {
 
     // Base mount holes
     for(i = [0 : 1]) {
-      translate([case_w / 2 - 15, i * 12 - 22 + 0.05, -1]) {
-        cylinder(d = 3.2, h = 100, $fn = 90);
+      translate([case_w / 2 - 15, i * 12 - 24 + 0.05, -1]) {
+        cylinder(d = 3.2, h = 12, $fn = 90);
 
         translate([0, 0, 2.2])
         cylinder(d = 5.8, h = 2.4 + 0.1, $fn = 120);
@@ -418,7 +442,7 @@ module driver_case_bottom() {
 
     // Motor and power cutouts and zip tie slots
     for(i = [0 : 1]) {
-      translate([-3 + board_x - i * 18, -(case_w / 2 - 3) - 7 / 2, -1]) {
+      translate([-4.5 + board_x - i * 16, -(case_w / 2 - 1) - 7 / 2, -1]) {
         cylinder(d = 7, h = 80, $fn = 100);
 
         translate([-7 / 2, -7 / 2, 0])
@@ -431,7 +455,7 @@ module driver_case_bottom() {
     }
 
     // DC plug mount
-    translate([case_w / 2 - 21, -40, -1]) {
+    translate([case_w / 2 - 34.5, -44, -1]) {
       cylinder(d = 8, h = 8, $fn = 120);
 
       translate([0, 0, 3.6 + 1 - 1.8])
@@ -441,13 +465,6 @@ module driver_case_bottom() {
 }
 
 module driver_case_top() {
-  case_w = 86;
-  case_l = 98;
-  case_t = 0.6 * 6;
-
-  board_w = 70;
-  board_l = 70;
-
   wall_h = 12;
 
   mirror([0, 0, 1])
@@ -463,7 +480,25 @@ module driver_case_top() {
       for(i = [0 : 3]) {
         translate([case_standoff[i][0], case_standoff[i][1], 0])
         rotate([0, 0, case_standoff[i][2]])
-          cylinder(d = standoff_d, h = case_t + 2.4, $fn = 90);
+          if(i != 2) {
+            cylinder(d = standoff_d, h = wall_h + 1.2, $fn = 90);
+
+            translate([0, -standoff_d / 2, 0])
+              cube([standoff_d / 2 + 0.6, standoff_d / 2, wall_h + 1.2]);
+
+            translate([-standoff_d / 2, 0, 0])
+              cube([standoff_d / 2, standoff_d / 2 + 0.6, wall_h + 1.2]);
+          }
+          // The odd one out
+          else {
+            cylinder(d = standoff_d, h = wall_h + 1.2, $fn = 90);
+
+            translate([-standoff_d / 2, -standoff_d / 2 - 1, 0])
+              cube([standoff_d, standoff_d / 2 + 1, wall_h]);
+
+            translate([-standoff_d / 2, -standoff_d / 2 - 0.6, 0])
+              cube([standoff_d, standoff_d / 2 + 0.6, wall_h + 1.2]);
+          }
       }
 
       // Side walls
@@ -479,23 +514,56 @@ module driver_case_top() {
       translate([-case_w / 2, case_l / 2 - 0.4 * 5, 0])
         cube([case_w, 0.4 * 5, wall_h]);
 
-      // Inner fillets
+      tab_d = (10 - 2 * 0.4 * 5) - 0.2;
+
+      // Inner fillets and case alignment tabs
       for(i = [0 : 1])
       for(j = [0 : 1]) {
         mirror([i, 0, 0])
         mirror([0, j, 0]) {
+
           translate([case_w / 2 - 10 / 2, case_l / 2 - 10 / 2, 0]) {
             difference() {
-              cylinder(d = 10, h = wall_h, $fn = 160);
+              union() {
+                cylinder(d = 10, h = wall_h, $fn = 160);
+
+                translate([0.9, -4.3, 0])
+                  cube([2.2, 4.3, wall_h]);
+
+                translate([-4.3, 0.9, 0])
+                  cube([4.3, 2.2, wall_h]);
+              }
 
               translate([0, 0, -0.1])
-                cylinder(d = 10 - 2 * 0.4 * 5, h = wall_h + 2, $fn = 160);
+                cylinder(d = (10 - 2 * 0.4 * 5) - 0.8, h = wall_h + 2, $fn = 160);
 
-              translate([-10, -10 / 2 - 0.4 * 5, -0.1])
+              translate([-10, -(10 / 2 + 0.4 * 5) - 0.8 / 2, -0.1])
                 cube([10, 10, 20]);
 
-              translate([-10 / 2 - 0.4 * 5, -10, -0.1])
+              translate([-(10 / 2 + 0.4 * 5) - 0.8 / 2, -10, -0.1])
                 cube([10, 10, 20]);
+            }
+
+            // Top
+            translate([0, 0, 1.2]) {
+              difference() {
+                cylinder(d = tab_d, h = wall_h, $fn = 160);
+
+                translate([0, 0, -0.1])
+                  cylinder(d = tab_d - 2 * 0.4 * 5, h = wall_h + 2, $fn = 160);
+
+                translate([-10, -10 / 2 - 0.4 * 5, -0.1])
+                  cube([10, 10, 20]);
+
+                translate([-10 / 2 - 0.4 * 5, -10, -0.1])
+                  cube([10, 10, 20]);
+              }
+
+              translate([0.9, -4.3, 0])
+                cube([2, 4.3, wall_h]);
+
+              translate([-4.3, 0.9, 0])
+                cube([4.3, 2, wall_h]);
             }
           }
         }
@@ -517,7 +585,7 @@ module driver_case_top() {
         }
       }
 
-      // Digital input and output, and servo cutouts
+      // Digital input and output cutouts
       translate([70 / 2 + 1.5, -31.5, case_t + 6.75]) {
         difference() {
           cube([25, 65.5, case_t + 1]);
@@ -530,13 +598,31 @@ module driver_case_top() {
           }
         }
       }
+
+      // Servo cutout
+      translate([70 / 2 - 7.5, -6, -1]) {
+        cylinder(d = 6, h = case_t + wall_h, $fn = 90);
+
+        translate([0, -6 / 2, 0])
+          cube([35, 6, case_t + wall_h]);
+      }
+
+      // Power LED viewport
+      translate([-20, 32.35, -10])
+        cylinder(d = 2.6, h = 50, $fn = 90);
+
+      // Debugging buttons
+      /*for(i = [0 : 1]) {
+        translate([-5.55 - i * 0.15, 3.65 + i * 5.2, -10])
+          cylinder(d = 3.2, h = 50, $fn = 90);
+      }*/
     }
 
     // Bottom case mount holes
     for(i = [0 : 3]) {
       translate([case_standoff[i][0], case_standoff[i][1], -1])
       rotate([0, 0, case_standoff[i][2]]) {
-        cylinder(d = 3.4, h = case_t + 4, $fn = 90);
+        cylinder(d = 3.4, h = wall_h + 3, $fn = 90);
 
         cylinder(d = 5.8, h = 2.4 + 1, $fn = 90);
 
@@ -1579,7 +1665,7 @@ module assembly(x_offset = 0, y_offset = 0) {
   }
 
   // CNC driver board and case
-  translate([-47.5 - 0.05, x_length / 2 + 33, 80 / 2 - 30 + 0.1])
+  translate([-47.5 - 0.05, x_length / 2 + 33, 80 / 2 - 28 + 0.1])
   rotate([0, 0, -90])
   rotate([90, 0, 0]) {
     color("grey")
@@ -1848,6 +1934,6 @@ module print_part(part_num = 0) {
 // Maximum y is +/-162.5mm (12 3/4" total travel)
 assembly(x_offset = 0, y_offset = 0);
 
-//print_part(0);
+//print_part(10);
 
 // EOF
